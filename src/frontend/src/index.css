@@ -1,0 +1,259 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Lato:wght@300;400;700&family=Dancing+Script:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "PlayfairDisplay";
+  src: url("/assets/fonts/PlayfairDisplay.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Romantic blush palette */
+    --background: 0.97 0.008 20;
+    --foreground: 0.22 0.015 15;
+    --card: 0.94 0.022 40;
+    --card-foreground: 0.22 0.015 15;
+    --popover: 0.97 0.008 20;
+    --popover-foreground: 0.22 0.015 15;
+
+    /* Primary: dusty rose */
+    --primary: 0.58 0.085 10;
+    --primary-foreground: 0.98 0.005 0;
+
+    /* Secondary: soft pink */
+    --secondary: 0.92 0.035 15;
+    --secondary-foreground: 0.22 0.015 15;
+
+    /* Muted: warm gray */
+    --muted: 0.93 0.015 25;
+    --muted-foreground: 0.5 0.025 20;
+
+    /* Accent: gold */
+    --accent: 0.78 0.1 65;
+    --accent-foreground: 0.22 0.015 15;
+
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+
+    --border: 0.85 0.03 30;
+    --input: 0.85 0.03 30;
+    --ring: 0.58 0.085 10;
+
+    /* Custom tokens */
+    --blush: 0.93 0.04 15;
+    --rose: 0.58 0.085 10;
+    --gold: 0.78 0.1 65;
+    --parchment: 0.94 0.022 40;
+    --deep-rose: 0.5 0.115 10;
+    --soft-pink: 0.88 0.055 15;
+
+    --chart-1: 0.646 0.222 41.116;
+    --chart-2: 0.6 0.118 184.704;
+    --chart-3: 0.398 0.07 227.392;
+    --chart-4: 0.828 0.189 84.429;
+    --chart-5: 0.769 0.188 70.08;
+    --sidebar: 0.985 0 0;
+    --sidebar-foreground: 0.145 0 0;
+    --sidebar-primary: 0.205 0 0;
+    --sidebar-primary-foreground: 0.985 0 0;
+    --sidebar-accent: 0.97 0 0;
+    --sidebar-accent-foreground: 0.205 0 0;
+    --sidebar-border: 0.922 0 0;
+    --sidebar-ring: 0.708 0 0;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Lato", "GeneralSans", sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-playfair {
+    font-family: "PlayfairDisplay", Georgia, serif;
+  }
+  .font-dancing {
+    font-family: "Dancing Script", cursive;
+  }
+  .font-lato {
+    font-family: "Lato", sans-serif;
+  }
+
+  .text-rose-custom {
+    color: oklch(var(--rose));
+  }
+  .text-gold-custom {
+    color: oklch(var(--gold));
+  }
+  .bg-parchment {
+    background-color: oklch(var(--parchment));
+  }
+  .bg-blush {
+    background-color: oklch(var(--blush));
+  }
+  .border-gold {
+    border-color: oklch(var(--gold));
+  }
+  .text-deep-rose {
+    color: oklch(var(--deep-rose));
+  }
+  .bg-rose-btn {
+    background-color: oklch(var(--rose));
+  }
+  .bg-soft-pink {
+    background-color: oklch(var(--soft-pink));
+  }
+}
+
+/* Animations */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-120vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.15);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes splashExit {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes floatHeart {
+  0% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-18px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.8;
+  }
+}
+
+.animate-float-up {
+  animation: floatUp linear infinite;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s ease forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.animate-float-heart {
+  animation: floatHeart 3s ease-in-out infinite;
+}
+
+.splash-exit {
+  animation: splashExit 0.6s ease-in forwards;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--rose));
+  border-radius: 3px;
+}
