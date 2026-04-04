@@ -248,11 +248,9 @@ actor {
     loveQuoteStore.get(id);
   };
 
-  // Photo Entry CRUD operations (Admin Only) - uses photoEntryStoreV2
+  // Photo Entry CRUD operations
+  // addPhotoEntry: open to everyone (no admin check) so anyone can share memories
   public shared ({ caller }) func addPhotoEntry(newPhoto : PhotoEntry) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can add photos");
-    };
     photoEntryStoreV2.add(newPhoto.id, newPhoto);
   };
 

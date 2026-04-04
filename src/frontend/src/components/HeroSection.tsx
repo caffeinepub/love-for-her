@@ -1,4 +1,6 @@
+import { Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const HERO_HEARTS = Array.from({ length: 20 }, (_, i) => ({
   id: i,
@@ -20,6 +22,32 @@ export default function HeroSection() {
   const scrollToShayari = () => {
     const el = document.getElementById("shayari");
     if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: "Love For Her ♥",
+      text: "Someone loves you ❤️ — check this out!",
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // User cancelled — silently ignore
+        if ((err as DOMException)?.name !== "AbortError") {
+          console.error(err);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied! Share it with your love ♥");
+      } catch {
+        toast.error("Could not copy link. Please copy the URL manually.");
+      }
+    }
   };
 
   return (
@@ -96,7 +124,7 @@ export default function HeroSection() {
               style={{ animationDelay: "0.5s", animationFillMode: "both" }}
             >
               <p
-                className="font-dancing text-white/90 mb-10"
+                className="font-dancing text-white/90 mb-8"
                 style={{
                   fontSize: "clamp(1.2rem, 3vw, 1.8rem)",
                   textShadow: "0 2px 12px rgba(0,0,0,0.4)",
@@ -105,20 +133,39 @@ export default function HeroSection() {
                 Every moment with you is a beautiful memory
               </p>
 
-              <button
-                type="button"
-                onClick={scrollToShayari}
-                className="inline-flex items-center gap-2 text-white font-lato font-semibold text-sm tracking-wider px-8 py-3 rounded-full transition-all duration-300 hover:scale-105 active:scale-95"
-                style={{
-                  background:
-                    "linear-gradient(135deg, oklch(0.58 0.085 10), oklch(0.50 0.115 10))",
-                  boxShadow:
-                    "0 4px 24px rgba(201,122,124,0.5), 0 1px 6px rgba(0,0,0,0.2)",
-                }}
-                data-ocid="hero.primary_button"
-              >
-                Scroll to Begin ♥
-              </button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={scrollToShayari}
+                  className="inline-flex items-center gap-2 text-white font-lato font-semibold text-sm tracking-wider px-8 py-3 rounded-full transition-all duration-300 hover:scale-105 active:scale-95"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, oklch(0.58 0.085 10), oklch(0.50 0.115 10))",
+                    boxShadow:
+                      "0 4px 24px rgba(201,122,124,0.5), 0 1px 6px rgba(0,0,0,0.2)",
+                  }}
+                  data-ocid="hero.primary_button"
+                >
+                  Scroll to Begin ♥
+                </button>
+
+                {/* Share Love button */}
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="inline-flex items-center gap-2 text-white font-lato font-semibold text-sm tracking-wider px-7 py-3 rounded-full transition-all duration-300 hover:scale-105 active:scale-95"
+                  style={{
+                    background: "rgba(255,255,255,0.15)",
+                    backdropFilter: "blur(10px)",
+                    border: "1.5px solid rgba(255,255,255,0.35)",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                  }}
+                  data-ocid="hero.secondary_button"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share Love ♥
+                </button>
+              </div>
             </div>
           </>
         )}
