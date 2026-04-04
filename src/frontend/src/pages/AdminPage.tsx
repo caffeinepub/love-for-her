@@ -15,10 +15,12 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Check,
+  KeyRound,
   Loader2,
   Pencil,
   Plus,
@@ -45,6 +47,7 @@ import {
   useGetAllShayari,
   useIsCallerAdmin,
 } from "../hooks/useQueries";
+import { storeSessionParameter } from "../utils/urlParams";
 
 // ---- Shayari Tab ----
 function ShayariTab() {
@@ -803,6 +806,122 @@ function PhotosTab() {
   );
 }
 
+// ---- Token Entry Screen ----
+function TokenEntryScreen({ onSignOut }: { onSignOut: () => void }) {
+  const [token, setToken] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleClaimAccess = async () => {
+    if (!token.trim()) {
+      toast.error("Please enter the admin token.");
+      return;
+    }
+    setIsSubmitting(true);
+    storeSessionParameter("caffeineAdminToken", token.trim());
+    await queryClient.invalidateQueries();
+    window.location.reload();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleClaimAccess();
+    }
+  };
+
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{
+        background:
+          "linear-gradient(160deg, oklch(0.94 0.022 40) 0%, oklch(0.97 0.008 20) 100%)",
+      }}
+    >
+      <div
+        className="w-full max-w-md rounded-3xl p-10"
+        style={{
+          background: "white",
+          boxShadow: "0 8px 48px 0 oklch(0.22 0.015 15 / 0.10)",
+          border: "1px solid oklch(0.85 0.030 30)",
+        }}
+        data-ocid="admin.card"
+      >
+        <div className="text-center mb-8">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: "oklch(0.94 0.022 40)" }}
+          >
+            <KeyRound
+              className="w-7 h-7"
+              style={{ color: "oklch(0.58 0.085 10)" }}
+            />
+          </div>
+          <h2 className="font-playfair text-2xl font-semibold text-foreground mb-2">
+            Enter Admin Token
+          </h2>
+          <p className="font-lato text-muted-foreground text-sm">
+            Enter the secret token to claim admin access.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="admin-token">Admin Secret Token</Label>
+            <Input
+              id="admin-token"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter your secret token..."
+              className="rounded-xl"
+              data-ocid="admin.input"
+            />
+          </div>
+
+          <Button
+            onClick={handleClaimAccess}
+            disabled={isSubmitting || !token.trim()}
+            className="w-full rounded-full py-3"
+            style={{ background: "oklch(0.58 0.085 10)", color: "white" }}
+            data-ocid="admin.primary_button"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying...
+              </>
+            ) : (
+              "Claim Admin Access"
+            )}
+          </Button>
+        </div>
+
+        <div
+          className="mt-6 pt-6 flex items-center justify-center gap-4"
+          style={{ borderTop: "1px solid oklch(0.92 0.015 30)" }}
+        >
+          <Button
+            onClick={onSignOut}
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            data-ocid="admin.secondary_button"
+          >
+            Sign Out
+          </Button>
+          <Link
+            to="/"
+            className="font-lato text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+            data-ocid="admin.link"
+          >
+            <ArrowLeft className="w-3 h-3" /> Back to site
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- Admin Page ----
 export default function AdminPage() {
   const { login, clear, loginStatus, identity, isInitializing } =
@@ -878,49 +997,7 @@ export default function AdminPage() {
   }
 
   if (!isAdmin) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center px-4"
-        style={{
-          background:
-            "linear-gradient(160deg, oklch(0.94 0.022 40) 0%, oklch(0.97 0.008 20) 100%)",
-        }}
-      >
-        <div
-          className="w-full max-w-md rounded-3xl p-10 text-center"
-          style={{
-            background: "white",
-            boxShadow: "0 8px 48px 0 oklch(0.22 0.015 15 / 0.10)",
-          }}
-          data-ocid="admin.error_state"
-        >
-          <div className="text-4xl mb-4">🔒</div>
-          <h2 className="font-playfair text-xl font-semibold text-foreground mb-2">
-            Access Denied
-          </h2>
-          <p className="font-lato text-muted-foreground text-sm mb-6">
-            You don't have admin access. Please sign in with the admin account.
-          </p>
-          <Button
-            onClick={clear}
-            variant="outline"
-            className="rounded-full mr-3"
-            data-ocid="admin.secondary_button"
-          >
-            Sign Out
-          </Button>
-          <Link to="/">
-            <Button
-              variant="outline"
-              className="rounded-full"
-              data-ocid="admin.link"
-            >
-              <ArrowLeft className="w-3 h-3 mr-1" /> Back to site
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <TokenEntryScreen onSignOut={clear} />;
   }
 
   return (
