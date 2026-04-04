@@ -92,7 +92,8 @@ export class ExternalBlob {
 export interface PhotoEntry {
     id: string;
     order: bigint;
-    blob: ExternalBlob;
+    dataUrl: string;
+    mimeType: string;
     caption: string;
 }
 export interface _CaffeineStorageRefillResult {
@@ -155,7 +156,7 @@ export interface backendInterface {
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
 }
-import type { ExternalBlob as _ExternalBlob, LoveQuote as _LoveQuote, PhotoEntry as _PhotoEntry, Shayari as _Shayari, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { LoveQuote as _LoveQuote, PhotoEntry as _PhotoEntry, Shayari as _Shayari, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -605,18 +606,21 @@ function from_candid_record_n17(_uploadFile: (file: ExternalBlob) => Promise<Uin
 async function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     order: bigint;
-    blob: _ExternalBlob;
+    dataUrl: string;
+    mimeType: string;
     caption: string;
 }): Promise<{
     id: string;
     order: bigint;
-    blob: ExternalBlob;
+    dataUrl: string;
+    mimeType: string;
     caption: string;
 }> {
     return {
         id: value.id,
         order: value.order,
-        blob: await from_candid_ExternalBlob_n22(_uploadFile, _downloadFile, value.blob),
+        dataUrl: value.dataUrl,
+        mimeType: value.mimeType,
         caption: value.caption
     };
 }
@@ -668,18 +672,21 @@ function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Arra
 async function to_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: string;
     order: bigint;
-    blob: ExternalBlob;
+    dataUrl: string;
+    mimeType: string;
     caption: string;
 }): Promise<{
     id: string;
     order: bigint;
-    blob: _ExternalBlob;
+    dataUrl: string;
+    mimeType: string;
     caption: string;
 }> {
     return {
         id: value.id,
         order: value.order,
-        blob: await to_candid_ExternalBlob_n12(_uploadFile, _downloadFile, value.blob),
+        dataUrl: value.dataUrl,
+        mimeType: value.mimeType,
         caption: value.caption
     };
 }

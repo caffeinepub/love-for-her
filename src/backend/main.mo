@@ -7,10 +7,10 @@ import List "mo:core/List";
 import Array "mo:core/Array";
 import Order "mo:core/Order";
 import Nat "mo:core/Nat";
-import Storage "blob-storage/Storage";
-import MixinStorage "blob-storage/Mixin";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
+import Storage "blob-storage/Storage";
+import MixinStorage "blob-storage/Mixin";
 
 actor {
   // Authorization infrastructure
@@ -32,9 +32,19 @@ actor {
     author : ?Text;
   };
 
-  type PhotoEntry = {
+  // Old type for migration (keeps blob field)
+  type PhotoEntryV1 = {
     id : Text;
     blob : Storage.ExternalBlob;
+    caption : Text;
+    order : Nat;
+  };
+
+  // New type with dataUrl
+  type PhotoEntry = {
+    id : Text;
+    dataUrl : Text;
+    mimeType : Text;
     caption : Text;
     order : Nat;
   };
@@ -58,8 +68,26 @@ actor {
   // Persistent data
   let shayariStore = Map.empty<Text, Shayari>();
   let loveQuoteStore = Map.empty<Text, LoveQuote>();
-  let photoEntryStore = Map.empty<Text, PhotoEntry>();
+  // Migration: keep old stable store under old type name so Motoko can deserialize it
+  let photoEntryStore : Map.Map<Text, PhotoEntryV1> = Map.empty<Text, PhotoEntryV1>();
+  // New store for the new schema
+  let photoEntryStoreV2 = Map.empty<Text, PhotoEntry>();
   let userProfiles = Map.empty<Principal, UserProfile>();
+
+  // Migrate old photo entries to new store on first upgrade
+  do {
+    for ((id, old) in photoEntryStore.entries()) {
+      // Old entries had blob; migrate them with empty dataUrl (they will just not display)
+      let migrated : PhotoEntry = {
+        id = old.id;
+        dataUrl = "";
+        mimeType = "image/jpeg";
+        caption = old.caption;
+        order = old.order;
+      };
+      photoEntryStoreV2.add(id, migrated);
+    };
+  };
 
   // Initialize with sample data
   do {
@@ -220,39 +248,39 @@ actor {
     loveQuoteStore.get(id);
   };
 
-  // Photo Entry CRUD operations (Admin Only)
+  // Photo Entry CRUD operations (Admin Only) - uses photoEntryStoreV2
   public shared ({ caller }) func addPhotoEntry(newPhoto : PhotoEntry) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can add photos");
     };
-    photoEntryStore.add(newPhoto.id, newPhoto);
+    photoEntryStoreV2.add(newPhoto.id, newPhoto);
   };
 
   public shared ({ caller }) func editPhotoEntry(updatedPhoto : PhotoEntry) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can edit photos");
     };
-    if (not photoEntryStore.containsKey(updatedPhoto.id)) {
+    if (not photoEntryStoreV2.containsKey(updatedPhoto.id)) {
       Runtime.trap("Photo entry not found");
     };
-    photoEntryStore.add(updatedPhoto.id, updatedPhoto);
+    photoEntryStoreV2.add(updatedPhoto.id, updatedPhoto);
   };
 
   public shared ({ caller }) func deletePhotoEntry(id : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can delete photos");
     };
-    if (not photoEntryStore.containsKey(id)) {
+    if (not photoEntryStoreV2.containsKey(id)) {
       Runtime.trap("Photo entry not found");
     };
-    photoEntryStore.remove(id);
+    photoEntryStoreV2.remove(id);
   };
 
   public query func getAllPhotoEntries() : async [PhotoEntry] {
-    photoEntryStore.values().toArray();
+    photoEntryStoreV2.values().toArray();
   };
 
   public query func getPhotoEntryById(id : Text) : async ?PhotoEntry {
-    photoEntryStore.get(id);
+    photoEntryStoreV2.get(id);
   };
 };

@@ -23,7 +23,7 @@ function Lightbox({
         onClick={(e) => e.stopPropagation()}
       >
         <img
-          src={photo.blob.getDirectURL()}
+          src={photo.dataUrl}
           alt={photo.caption || "Photo"}
           className="rounded-2xl object-contain max-h-[80vh] w-auto mx-auto shadow-2xl"
           style={{ border: "2px solid oklch(0.78 0.10 65 / 0.4)" }}
@@ -103,7 +103,7 @@ export default function GallerySection() {
                 data-ocid={`gallery.item.${idx + 1}`}
               >
                 <img
-                  src={photo.blob.getDirectURL()}
+                  src={photo.dataUrl}
                   alt={photo.caption || `Photo ${idx + 1}`}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"

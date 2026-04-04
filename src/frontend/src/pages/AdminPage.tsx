@@ -31,7 +31,6 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import type { LoveQuote, Shayari } from "../backend";
-import { ExternalBlob } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useAddLoveQuote,
@@ -47,7 +46,8 @@ import {
   useGetAllShayari,
   useIsCallerAdmin,
 } from "../hooks/useQueries";
-import { storeSessionParameter } from "../utils/urlParams";
+
+const ADMIN_PASSWORD = "qazwsxplmokn123098";
 
 // ---- Shayari Tab ----
 function ShayariTab() {
@@ -552,7 +552,6 @@ function PhotosTab() {
 
   const [caption, setCaption] = useState("");
   const [order, setOrder] = useState(1);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -570,16 +569,18 @@ function PhotosTab() {
       return;
     }
     try {
-      setUploadProgress(0);
-      const arrayBuffer = await selectedFile.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let blob = ExternalBlob.fromBytes(bytes);
-      blob = blob.withUploadProgress((pct) => setUploadProgress(pct));
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile);
+      });
 
       await addMutation.mutateAsync({
         id: crypto.randomUUID(),
         order: BigInt(order),
-        blob,
+        dataUrl,
+        mimeType: selectedFile.type,
         caption: caption.trim(),
       });
 
@@ -589,10 +590,8 @@ function PhotosTab() {
       setSelectedFile(null);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
-      setUploadProgress(null);
     } catch {
       toast.error("Upload failed. Please try again.");
-      setUploadProgress(null);
     }
   };
 
@@ -683,23 +682,6 @@ function PhotosTab() {
           </div>
         </div>
 
-        {uploadProgress !== null && (
-          <div className="space-y-1" data-ocid="gallery.loading_state">
-            <p className="font-lato text-xs text-muted-foreground">
-              Uploading... {Math.round(uploadProgress)}%
-            </p>
-            <div className="h-2 rounded-full overflow-hidden bg-border">
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${uploadProgress}%`,
-                  background: "oklch(0.58 0.085 10)",
-                }}
-              />
-            </div>
-          </div>
-        )}
-
         <Button
           onClick={handleUpload}
           disabled={addMutation.isPending || !selectedFile}
@@ -736,7 +718,7 @@ function PhotosTab() {
               data-ocid={`gallery.item.${idx + 1}`}
             >
               <img
-                src={p.blob.getDirectURL()}
+                src={p.dataUrl}
                 alt={p.caption || `Photo ${idx + 1}`}
                 className="w-full h-full object-cover"
               />
@@ -806,21 +788,23 @@ function PhotosTab() {
   );
 }
 
-// ---- Token Entry Screen ----
-function TokenEntryScreen({ onSignOut }: { onSignOut: () => void }) {
+// ---- Password Entry Screen ----
+function PasswordEntryScreen({ onSignOut }: { onSignOut: () => void }) {
   const [token, setToken] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
   const handleClaimAccess = async () => {
     if (!token.trim()) {
-      toast.error("Please enter the admin token.");
+      toast.error("Please enter the admin password.");
       return;
     }
-    setIsSubmitting(true);
-    storeSessionParameter("caffeineAdminToken", token.trim());
-    await queryClient.invalidateQueries();
-    window.location.reload();
+    if (token.trim() === ADMIN_PASSWORD) {
+      sessionStorage.setItem("localAdminUnlocked", "true");
+      await queryClient.invalidateQueries();
+      window.location.reload();
+    } else {
+      toast.error("Incorrect password.");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -857,23 +841,23 @@ function TokenEntryScreen({ onSignOut }: { onSignOut: () => void }) {
             />
           </div>
           <h2 className="font-playfair text-2xl font-semibold text-foreground mb-2">
-            Enter Admin Token
+            Admin Access
           </h2>
           <p className="font-lato text-muted-foreground text-sm">
-            Enter the secret token to claim admin access.
+            Enter your admin password to continue.
           </p>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="admin-token">Admin Secret Token</Label>
+            <Label htmlFor="admin-token">Admin Password</Label>
             <Input
               id="admin-token"
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Enter your secret token..."
+              placeholder="Enter your admin password..."
               className="rounded-xl"
               data-ocid="admin.input"
             />
@@ -881,18 +865,12 @@ function TokenEntryScreen({ onSignOut }: { onSignOut: () => void }) {
 
           <Button
             onClick={handleClaimAccess}
-            disabled={isSubmitting || !token.trim()}
+            disabled={!token.trim()}
             className="w-full rounded-full py-3"
             style={{ background: "oklch(0.58 0.085 10)", color: "white" }}
             data-ocid="admin.primary_button"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying...
-              </>
-            ) : (
-              "Claim Admin Access"
-            )}
+            Unlock Admin Panel
           </Button>
         </div>
 
@@ -927,6 +905,15 @@ export default function AdminPage() {
   const { login, clear, loginStatus, identity, isInitializing } =
     useInternetIdentity();
   const { data: isAdmin, isLoading: isCheckingAdmin } = useIsCallerAdmin();
+  const [localAdminUnlocked, setLocalAdminUnlocked] = useState(
+    () => sessionStorage.getItem("localAdminUnlocked") === "true",
+  );
+
+  const handleSignOut = () => {
+    sessionStorage.removeItem("localAdminUnlocked");
+    setLocalAdminUnlocked(false);
+    clear();
+  };
 
   if (isInitializing || isCheckingAdmin) {
     return (
@@ -996,8 +983,8 @@ export default function AdminPage() {
     );
   }
 
-  if (!isAdmin) {
-    return <TokenEntryScreen onSignOut={clear} />;
+  if (!isAdmin && !localAdminUnlocked) {
+    return <PasswordEntryScreen onSignOut={handleSignOut} />;
   }
 
   return (
@@ -1032,7 +1019,7 @@ export default function AdminPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={clear}
+            onClick={handleSignOut}
             className="rounded-full"
             data-ocid="admin.secondary_button"
           >
