@@ -2,6 +2,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LoveQuote, PhotoEntry, Shayari } from "../backend";
 import { useActor } from "./useActor";
 
+// Types for new backend APIs (not yet in generated backend.ts)
+export interface HeroPhoto {
+  dataUrl: string;
+  mimeType: string;
+}
+
+export interface MusicTrack {
+  dataUrl: string;
+  mimeType: string;
+  title: string;
+}
+
 export function useGetAllShayari() {
   const { actor, isFetching } = useActor();
   return useQuery<Shayari[]>({
@@ -150,5 +162,77 @@ export function useDeletePhotoEntry() {
       await actor.deletePhotoEntry(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["photos"] }),
+  });
+}
+
+export function useGetHeroPhoto() {
+  const { actor, isFetching } = useActor();
+  return useQuery<HeroPhoto | null>({
+    queryKey: ["heroPhoto"],
+    queryFn: async () => {
+      if (!actor) return null;
+      return (actor as any).getHeroPhoto() as Promise<HeroPhoto | null>;
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useSetHeroPhoto() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: HeroPhoto) => {
+      if (!actor) throw new Error("Not connected");
+      await (actor as any).setHeroPhoto(p);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["heroPhoto"] }),
+  });
+}
+
+export function useClearHeroPhoto() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Not connected");
+      await (actor as any).clearHeroPhoto();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["heroPhoto"] }),
+  });
+}
+
+export function useGetMusicTrack() {
+  const { actor, isFetching } = useActor();
+  return useQuery<MusicTrack | null>({
+    queryKey: ["musicTrack"],
+    queryFn: async () => {
+      if (!actor) return null;
+      return (actor as any).getMusicTrack() as Promise<MusicTrack | null>;
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useSetMusicTrack() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (t: MusicTrack) => {
+      if (!actor) throw new Error("Not connected");
+      await (actor as any).setMusicTrack(t);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["musicTrack"] }),
+  });
+}
+
+export function useClearMusicTrack() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Not connected");
+      await (actor as any).clearMusicTrack();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["musicTrack"] }),
   });
 }

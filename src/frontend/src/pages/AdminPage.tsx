@@ -20,97 +20,118 @@ import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Check,
+  ImagePlus,
   KeyRound,
   Loader2,
+  Music,
   Pencil,
   Plus,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import type { LoveQuote, Shayari } from "../backend";
+import type { LoveQuote } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useAddLoveQuote,
   useAddPhotoEntry,
-  useAddShayari,
+  useClearHeroPhoto,
+  useClearMusicTrack,
   useDeleteLoveQuote,
   useDeletePhotoEntry,
-  useDeleteShayari,
   useEditLoveQuote,
-  useEditShayari,
   useGetAllLoveQuotes,
   useGetAllPhotoEntries,
-  useGetAllShayari,
+  useGetHeroPhoto,
+  useGetMusicTrack,
   useIsCallerAdmin,
+  useSetHeroPhoto,
+  useSetMusicTrack,
 } from "../hooks/useQueries";
 
 const ADMIN_PASSWORD = "qazwsxplmokn123098";
 
-// ---- Shayari Tab ----
-function ShayariTab() {
-  const { data: items, isLoading } = useGetAllShayari();
-  const addMutation = useAddShayari();
-  const editMutation = useEditShayari();
-  const deleteMutation = useDeleteShayari();
+// ---- Shared image compression utility ----
+async function compressImage(
+  file: File,
+  maxWidth = 1920,
+  quality = 0.82,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editBody, setEditBody] = useState("");
-  const [editOrder, setEditOrder] = useState(1);
+// ---- Hero Photo Tab ----
+function HeroPhotoTab() {
+  const { data: heroPhoto, isLoading } = useGetHeroPhoto();
+  const setHeroPhoto = useSetHeroPhoto();
+  const clearHeroPhoto = useClearHeroPhoto();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const [newTitle, setNewTitle] = useState("");
-  const [newBody, setNewBody] = useState("");
-  const [newOrder, setNewOrder] = useState(1);
-
-  const startEdit = (s: Shayari) => {
-    setEditingId(s.id);
-    setEditTitle(s.title);
-    setEditBody(s.body);
-    setEditOrder(Number(s.order));
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
   };
 
-  const cancelEdit = () => setEditingId(null);
-
-  const saveEdit = async () => {
-    if (!editingId) return;
-    await editMutation.mutateAsync({
-      id: editingId,
-      title: editTitle,
-      body: editBody,
-      order: BigInt(editOrder),
-    });
-    toast.success("Shayari updated!");
-    setEditingId(null);
-  };
-
-  const handleAdd = async () => {
-    if (!newTitle.trim() || !newBody.trim()) {
-      toast.error("Title and body are required.");
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast.error("Please select a photo first.");
       return;
     }
-    await addMutation.mutateAsync({
-      id: crypto.randomUUID(),
-      title: newTitle.trim(),
-      body: newBody.trim(),
-      order: BigInt(newOrder),
-    });
-    toast.success("Shayari added!");
-    setNewTitle("");
-    setNewBody("");
-    setNewOrder(1);
+    try {
+      toast.loading("Compressing and uploading...", { id: "hero-upload" });
+      const dataUrl = await compressImage(selectedFile, 1920, 0.85);
+      await setHeroPhoto.mutateAsync({
+        dataUrl,
+        mimeType: "image/jpeg",
+      });
+      toast.success("Hero photo updated! ♥", { id: "hero-upload" });
+      setSelectedFile(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch {
+      toast.error("Upload failed. Please try again.", { id: "hero-upload" });
+    }
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteMutation.mutateAsync(id);
-    toast.success("Shayari deleted.");
+  const handleClear = async () => {
+    await clearHeroPhoto.mutateAsync();
+    toast.success("Hero photo removed.");
   };
 
   return (
     <div className="space-y-8">
-      {/* Add form */}
+      {/* Current hero photo */}
       <div
         className="rounded-2xl p-6 space-y-4"
         style={{
@@ -119,196 +140,447 @@ function ShayariTab() {
         }}
       >
         <h3 className="font-playfair font-semibold text-foreground text-lg">
-          Add New Shayari
+          Current Hero Photo
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 space-y-2">
-            <Label htmlFor="new-shayari-title">Title</Label>
-            <Input
-              id="new-shayari-title"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="e.g. Dil Ki Baat"
-              data-ocid="shayari.input"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-shayari-order">Order</Label>
-            <Input
-              id="new-shayari-order"
-              type="number"
-              min={1}
-              value={newOrder}
-              onChange={(e) => setNewOrder(Number(e.target.value))}
-              data-ocid="shayari.input"
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="new-shayari-body">
-            Body (use Enter for line breaks)
-          </Label>
-          <Textarea
-            id="new-shayari-body"
-            value={newBody}
-            onChange={(e) => setNewBody(e.target.value)}
-            rows={4}
-            placeholder="Tujhe dekh ke aankhein sharmati hain..."
-            data-ocid="shayari.textarea"
+        {isLoading ? (
+          <Skeleton
+            className="w-full h-48 rounded-xl"
+            data-ocid="hero.loading_state"
           />
-        </div>
-        <Button
-          onClick={handleAdd}
-          disabled={addMutation.isPending}
-          className="rounded-full"
-          style={{ background: "oklch(0.58 0.085 10)", color: "white" }}
-          data-ocid="shayari.submit_button"
-        >
-          {addMutation.isPending ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Plus className="w-4 h-4 mr-2" />
-          )}
-          Add Shayari
-        </Button>
+        ) : heroPhoto?.dataUrl ? (
+          <div className="space-y-4">
+            <div className="relative rounded-xl overflow-hidden">
+              <img
+                src={heroPhoto.dataUrl}
+                alt="Current hero"
+                className="w-full max-h-64 object-cover"
+              />
+              <div
+                className="absolute inset-0 flex items-end p-4"
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(0,0,0,0.5), transparent)",
+                }}
+              >
+                <p className="font-lato text-white text-sm">
+                  Current hero photo
+                </p>
+              </div>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-full"
+                  data-ocid="hero.delete_button"
+                >
+                  <Trash2 className="w-3 h-3 mr-1" /> Remove Photo
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent data-ocid="hero.dialog">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove Hero Photo?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    The site will show the default background. This cannot be
+                    undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-ocid="hero.cancel_button">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClear}
+                    className="bg-destructive text-destructive-foreground"
+                    data-ocid="hero.confirm_button"
+                  >
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        ) : (
+          <div
+            className="rounded-xl p-8 text-center"
+            style={{
+              background: "oklch(0.92 0.018 30)",
+              border: "1.5px dashed oklch(0.78 0.10 65 / 0.4)",
+            }}
+            data-ocid="hero.empty_state"
+          >
+            <ImagePlus className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+            <p className="font-lato text-muted-foreground text-sm">
+              No hero photo set. Upload one below.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* List */}
-      {isLoading ? (
-        <div className="space-y-3" data-ocid="shayari.loading_state">
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
+      {/* Upload new photo */}
+      <div
+        className="rounded-2xl p-6 space-y-4"
+        style={{
+          background: "oklch(0.94 0.022 40)",
+          border: "1px solid oklch(0.78 0.10 65 / 0.3)",
+        }}
+      >
+        <h3 className="font-playfair font-semibold text-foreground text-lg">
+          Upload New Hero Photo
+        </h3>
+        <p className="font-lato text-muted-foreground text-sm">
+          This photo will be displayed as the full-screen background on the
+          homepage.
+        </p>
+
+        <div className="space-y-2">
+          <Label htmlFor="hero-photo-file">Choose Photo</Label>
+          <div
+            className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors hover:border-rose-custom"
+            style={{
+              borderColor: previewUrl
+                ? "oklch(0.52 0.105 10)"
+                : "oklch(0.78 0.10 65 / 0.5)",
+            }}
+            data-ocid="hero.dropzone"
+          >
+            {previewUrl ? (
+              <div className="flex flex-col items-center gap-3">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="max-h-48 rounded-lg object-contain"
+                />
+                <p className="font-lato text-sm text-muted-foreground">
+                  {selectedFile?.name}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    URL.revokeObjectURL(previewUrl);
+                    setPreviewUrl(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="rounded-full"
+                  data-ocid="hero.cancel_button"
+                >
+                  <X className="w-3 h-3 mr-1" /> Clear
+                </Button>
+              </div>
+            ) : (
+              <label
+                htmlFor="hero-photo-file"
+                className="cursor-pointer flex flex-col items-center gap-2"
+              >
+                <ImagePlus className="w-10 h-10 text-muted-foreground" />
+                <p className="font-lato text-sm text-muted-foreground">
+                  Click to select her photo
+                </p>
+              </label>
+            )}
+            <input
+              ref={fileInputRef}
+              id="hero-photo-file"
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={handleFileChange}
+              data-ocid="hero.upload_button"
+            />
+          </div>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {(items ?? []).map((s, idx) => (
-            <div
-              key={s.id}
-              className="rounded-xl p-5"
-              style={{
-                background: "white",
-                border: "1px solid oklch(0.85 0.030 30)",
-              }}
-              data-ocid={`shayari.item.${idx + 1}`}
-            >
-              {editingId === s.id ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-2">
-                      <Input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        placeholder="Title"
-                        data-ocid="shayari.input"
-                      />
-                    </div>
-                    <Input
-                      type="number"
-                      value={editOrder}
-                      onChange={(e) => setEditOrder(Number(e.target.value))}
-                      placeholder="Order"
-                      data-ocid="shayari.input"
-                    />
-                  </div>
-                  <Textarea
-                    value={editBody}
-                    onChange={(e) => setEditBody(e.target.value)}
-                    rows={3}
-                    data-ocid="shayari.textarea"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={saveEdit}
-                      disabled={editMutation.isPending}
-                      data-ocid="shayari.save_button"
-                    >
-                      {editMutation.isPending ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Check className="w-3 h-3" />
-                      )}
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={cancelEdit}
-                      data-ocid="shayari.cancel_button"
-                    >
-                      <X className="w-3 h-3" /> Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-playfair font-semibold text-foreground mb-1">
-                      {s.title}
-                    </p>
-                    <p className="font-lato text-muted-foreground text-sm line-clamp-2">
-                      {s.body.split("\n")[0]}
-                    </p>
-                    <p className="font-lato text-xs text-muted-foreground mt-1">
-                      Order: {Number(s.order)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => startEdit(s)}
-                      data-ocid="shayari.edit_button"
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          data-ocid="shayari.delete_button"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent data-ocid="shayari.dialog">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Shayari?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel data-ocid="shayari.cancel_button">
-                            Cancel
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(s.id)}
-                            className="bg-destructive text-destructive-foreground"
-                            data-ocid="shayari.confirm_button"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-          {(items ?? []).length === 0 && (
-            <p
-              className="text-center text-muted-foreground font-lato py-8"
-              data-ocid="shayari.empty_state"
-            >
-              No shayari yet. Add your first one above!
-            </p>
+
+        <Button
+          onClick={handleUpload}
+          disabled={setHeroPhoto.isPending || !selectedFile}
+          className="rounded-full"
+          style={{ background: "oklch(0.52 0.105 10)", color: "white" }}
+          data-ocid="hero.submit_button"
+        >
+          {setHeroPhoto.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Upload className="w-4 h-4 mr-2" />
           )}
+          Set as Hero Photo
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ---- Music Tab ----
+function MusicTab() {
+  const { data: track, isLoading } = useGetMusicTrack();
+  const setMusicTrack = useSetMusicTrack();
+  const clearMusicTrack = useClearMusicTrack();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [title, setTitle] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Warn about large files
+    if (file.size > 5 * 1024 * 1024) {
+      toast.warning(
+        "This file is larger than 5MB. Large audio files may take a long time to upload and could affect performance. Consider using a shorter clip.",
+      );
+    }
+    setSelectedFile(file);
+    // Auto-fill title from filename if empty
+    if (!title) {
+      const name = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+      setTitle(name);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast.error("Please select an audio file first.");
+      return;
+    }
+    if (!title.trim()) {
+      toast.error("Please enter a title for the track.");
+      return;
+    }
+    try {
+      toast.loading("Uploading music...", { id: "music-upload" });
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile);
+      });
+      await setMusicTrack.mutateAsync({
+        dataUrl,
+        mimeType: selectedFile.type,
+        title: title.trim(),
+      });
+      toast.success("Music track uploaded! ♪", { id: "music-upload" });
+      setTitle("");
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch {
+      toast.error("Upload failed. Please try again.", { id: "music-upload" });
+    }
+  };
+
+  const handleClear = async () => {
+    await clearMusicTrack.mutateAsync();
+    toast.success("Music track removed.");
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Current track */}
+      <div
+        className="rounded-2xl p-6 space-y-4"
+        style={{
+          background: "oklch(0.94 0.022 40)",
+          border: "1px solid oklch(0.78 0.10 65 / 0.3)",
+        }}
+      >
+        <h3 className="font-playfair font-semibold text-foreground text-lg">
+          Current Music Track
+        </h3>
+        {isLoading ? (
+          <Skeleton
+            className="h-16 rounded-xl"
+            data-ocid="music.loading_state"
+          />
+        ) : track ? (
+          <div
+            className="flex items-center gap-4 rounded-xl p-4"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(0.35 0.095 10 / 0.12) 0%, oklch(0.76 0.11 65 / 0.08) 100%)",
+              border: "1px solid oklch(0.52 0.105 10 / 0.3)",
+            }}
+            data-ocid="music.panel"
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: "oklch(0.52 0.105 10 / 0.15)" }}
+            >
+              <Music className="w-5 h-5 text-rose-custom" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                className="font-dancing text-foreground truncate"
+                style={{ fontSize: "1.1rem" }}
+              >
+                {track.title}
+              </p>
+              <p className="font-lato text-muted-foreground text-xs mt-0.5">
+                {track.mimeType}
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-full flex-shrink-0"
+                  data-ocid="music.delete_button"
+                >
+                  <Trash2 className="w-3 h-3 mr-1" /> Remove
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent data-ocid="music.dialog">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove Music Track?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    The music player will no longer appear on the site.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-ocid="music.cancel_button">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClear}
+                    className="bg-destructive text-destructive-foreground"
+                    data-ocid="music.confirm_button"
+                  >
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        ) : (
+          <div
+            className="rounded-xl p-8 text-center"
+            style={{
+              background: "oklch(0.92 0.018 30)",
+              border: "1.5px dashed oklch(0.78 0.10 65 / 0.4)",
+            }}
+            data-ocid="music.empty_state"
+          >
+            <Music className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+            <p className="font-lato text-muted-foreground text-sm">
+              No music track set. Upload one below.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Upload new track */}
+      <div
+        className="rounded-2xl p-6 space-y-4"
+        style={{
+          background: "oklch(0.94 0.022 40)",
+          border: "1px solid oklch(0.78 0.10 65 / 0.3)",
+        }}
+      >
+        <h3 className="font-playfair font-semibold text-foreground text-lg">
+          Upload New Track
+        </h3>
+
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "oklch(0.88 0.055 65 / 0.25)",
+            border: "1px solid oklch(0.76 0.11 65 / 0.4)",
+          }}
+        >
+          <p
+            className="font-lato text-sm"
+            style={{ color: "oklch(0.50 0.08 45)" }}
+          >
+            ⚠️ Audio files can be very large. We recommend short clips under 5MB
+            for best performance.
+          </p>
         </div>
-      )}
+
+        <div className="space-y-2">
+          <Label htmlFor="music-title">Track Title</Label>
+          <Input
+            id="music-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Our Song, Tum Hi Ho..."
+            data-ocid="music.input"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="music-file">Audio File</Label>
+          <div
+            className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors hover:border-rose-custom"
+            style={{
+              borderColor: selectedFile
+                ? "oklch(0.52 0.105 10)"
+                : "oklch(0.78 0.10 65 / 0.5)",
+            }}
+            data-ocid="music.dropzone"
+          >
+            {selectedFile ? (
+              <div className="flex flex-col items-center gap-2">
+                <Music className="w-8 h-8 text-rose-custom" />
+                <p className="font-lato text-sm text-foreground font-medium">
+                  {selectedFile.name}
+                </p>
+                <p className="font-lato text-xs text-muted-foreground">
+                  {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="rounded-full mt-1"
+                  data-ocid="music.cancel_button"
+                >
+                  <X className="w-3 h-3 mr-1" /> Clear
+                </Button>
+              </div>
+            ) : (
+              <label
+                htmlFor="music-file"
+                className="cursor-pointer flex flex-col items-center gap-2"
+              >
+                <Music className="w-10 h-10 text-muted-foreground" />
+                <p className="font-lato text-sm text-muted-foreground">
+                  Click to select audio (MP3, AAC, OGG...)
+                </p>
+              </label>
+            )}
+            <input
+              ref={fileInputRef}
+              id="music-file"
+              type="file"
+              accept="audio/*"
+              className="sr-only"
+              onChange={handleFileChange}
+              data-ocid="music.upload_button"
+            />
+          </div>
+        </div>
+
+        <Button
+          onClick={handleUpload}
+          disabled={setMusicTrack.isPending || !selectedFile || !title.trim()}
+          className="rounded-full"
+          style={{ background: "oklch(0.52 0.105 10)", color: "white" }}
+          data-ocid="music.submit_button"
+        >
+          {setMusicTrack.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Music className="w-4 h-4 mr-2" />
+          )}
+          Upload Track
+        </Button>
+      </div>
     </div>
   );
 }
@@ -404,7 +676,7 @@ function QuotesTab() {
           onClick={handleAdd}
           disabled={addMutation.isPending}
           className="rounded-full"
-          style={{ background: "oklch(0.58 0.085 10)", color: "white" }}
+          style={{ background: "oklch(0.52 0.105 10)", color: "white" }}
           data-ocid="quotes.submit_button"
         >
           {addMutation.isPending ? (
@@ -569,21 +841,14 @@ function PhotosTab() {
       return;
     }
     try {
-      const dataUrl: string = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
-      });
-
+      const dataUrl = await compressImage(selectedFile, 1920, 0.82);
       await addMutation.mutateAsync({
         id: crypto.randomUUID(),
         order: BigInt(order),
         dataUrl,
-        mimeType: selectedFile.type,
+        mimeType: "image/jpeg",
         caption: caption.trim(),
       });
-
       toast.success("Photo uploaded!");
       setCaption("");
       setOrder(1);
@@ -620,7 +885,7 @@ function PhotosTab() {
             className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors hover:border-rose-custom"
             style={{
               borderColor: previewUrl
-                ? "oklch(0.58 0.085 10)"
+                ? "oklch(0.52 0.105 10)"
                 : "oklch(0.78 0.10 65 / 0.5)",
             }}
             data-ocid="gallery.dropzone"
@@ -686,7 +951,7 @@ function PhotosTab() {
           onClick={handleUpload}
           disabled={addMutation.isPending || !selectedFile}
           className="rounded-full"
-          style={{ background: "oklch(0.58 0.085 10)", color: "white" }}
+          style={{ background: "oklch(0.52 0.105 10)", color: "white" }}
           data-ocid="gallery.upload_button"
         >
           {addMutation.isPending ? (
@@ -742,7 +1007,7 @@ function PhotosTab() {
                     size="sm"
                     className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 p-0 rounded-full"
                     style={{
-                      background: "oklch(0.50 0.115 10 / 0.85)",
+                      background: "oklch(0.44 0.125 10 / 0.85)",
                       color: "white",
                     }}
                     data-ocid="gallery.delete_button"
@@ -818,7 +1083,7 @@ function PasswordEntryScreen({ onSignOut }: { onSignOut: () => void }) {
       className="min-h-screen flex items-center justify-center px-4"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.94 0.022 40) 0%, oklch(0.97 0.008 20) 100%)",
+          "linear-gradient(160deg, oklch(0.94 0.022 40) 0%, oklch(0.95 0.012 22) 100%)",
       }}
     >
       <div
@@ -837,7 +1102,7 @@ function PasswordEntryScreen({ onSignOut }: { onSignOut: () => void }) {
           >
             <KeyRound
               className="w-7 h-7"
-              style={{ color: "oklch(0.58 0.085 10)" }}
+              style={{ color: "oklch(0.52 0.105 10)" }}
             />
           </div>
           <h2 className="font-playfair text-2xl font-semibold text-foreground mb-2">
@@ -867,7 +1132,7 @@ function PasswordEntryScreen({ onSignOut }: { onSignOut: () => void }) {
             onClick={handleClaimAccess}
             disabled={!token.trim()}
             className="w-full rounded-full py-3"
-            style={{ background: "oklch(0.58 0.085 10)", color: "white" }}
+            style={{ background: "oklch(0.52 0.105 10)", color: "white" }}
             data-ocid="admin.primary_button"
           >
             Unlock Admin Panel
@@ -935,7 +1200,7 @@ export default function AdminPage() {
         className="min-h-screen flex items-center justify-center px-4"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.94 0.022 40) 0%, oklch(0.97 0.008 20) 100%)",
+            "linear-gradient(160deg, oklch(0.94 0.022 40) 0%, oklch(0.95 0.012 22) 100%)",
         }}
       >
         <div
@@ -958,7 +1223,7 @@ export default function AdminPage() {
             onClick={login}
             disabled={loginStatus === "logging-in"}
             className="w-full rounded-full py-3"
-            style={{ background: "oklch(0.58 0.085 10)", color: "white" }}
+            style={{ background: "oklch(0.52 0.105 10)", color: "white" }}
             data-ocid="admin.primary_button"
           >
             {loginStatus === "logging-in" ? (
@@ -992,7 +1257,7 @@ export default function AdminPage() {
       className="min-h-screen"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.94 0.022 40) 0%, oklch(0.97 0.008 20) 100%)",
+          "linear-gradient(160deg, oklch(0.94 0.022 40) 0%, oklch(0.95 0.012 22) 100%)",
       }}
     >
       {/* Admin header */}
@@ -1034,21 +1299,28 @@ export default function AdminPage() {
             Manage Your Love Story
           </h1>
           <p className="font-lato text-muted-foreground text-sm">
-            Add, edit, and delete content shown on the site.
+            Add, edit, and manage content shown on the site.
           </p>
         </div>
 
-        <Tabs defaultValue="shayari" data-ocid="admin.panel">
+        <Tabs defaultValue="hero" data-ocid="admin.panel">
           <TabsList
-            className="mb-8 rounded-full p-1"
+            className="mb-8 rounded-full p-1 flex-wrap h-auto gap-1"
             style={{ background: "oklch(0.94 0.022 40)" }}
           >
             <TabsTrigger
-              value="shayari"
+              value="hero"
               className="rounded-full font-lato"
               data-ocid="admin.tab"
             >
-              ✦ Shayari
+              🖼 Hero Photo
+            </TabsTrigger>
+            <TabsTrigger
+              value="music"
+              className="rounded-full font-lato"
+              data-ocid="admin.tab"
+            >
+              🎵 Music
             </TabsTrigger>
             <TabsTrigger
               value="quotes"
@@ -1066,8 +1338,11 @@ export default function AdminPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="shayari">
-            <ShayariTab />
+          <TabsContent value="hero">
+            <HeroPhotoTab />
+          </TabsContent>
+          <TabsContent value="music">
+            <MusicTab />
           </TabsContent>
           <TabsContent value="quotes">
             <QuotesTab />

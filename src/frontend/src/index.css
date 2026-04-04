@@ -11,48 +11,70 @@
   font-weight: 100 900;
 }
 
+@font-face {
+  font-family: "Parisienne";
+  src: url("/assets/fonts/Parisienne.woff2") format("woff2");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/assets/fonts/Fraunces.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 100 900;
+}
+
+@font-face {
+  font-family: "InstrumentSerif";
+  src: url("/assets/fonts/InstrumentSerif-Italic.woff2") format("woff2");
+  font-display: swap;
+  font-style: italic;
+}
+
 @layer base {
   :root {
     --radius: 0.75rem;
 
-    /* Romantic blush palette */
-    --background: 0.97 0.008 20;
-    --foreground: 0.22 0.015 15;
-    --card: 0.94 0.022 40;
-    --card-foreground: 0.22 0.015 15;
-    --popover: 0.97 0.008 20;
-    --popover-foreground: 0.22 0.015 15;
+    /* Deep romantic candlelight palette */
+    --background: 0.95 0.012 22;
+    --foreground: 0.18 0.018 15;
+    --card: 0.92 0.025 38;
+    --card-foreground: 0.18 0.018 15;
+    --popover: 0.95 0.012 22;
+    --popover-foreground: 0.18 0.018 15;
 
-    /* Primary: dusty rose */
-    --primary: 0.58 0.085 10;
+    /* Primary: deeper rose */
+    --primary: 0.52 0.105 10;
     --primary-foreground: 0.98 0.005 0;
 
     /* Secondary: soft pink */
-    --secondary: 0.92 0.035 15;
+    --secondary: 0.9 0.04 15;
     --secondary-foreground: 0.22 0.015 15;
 
     /* Muted: warm gray */
-    --muted: 0.93 0.015 25;
-    --muted-foreground: 0.5 0.025 20;
+    --muted: 0.91 0.018 25;
+    --muted-foreground: 0.48 0.028 20;
 
-    /* Accent: gold */
-    --accent: 0.78 0.1 65;
+    /* Accent: warm gold */
+    --accent: 0.76 0.11 65;
     --accent-foreground: 0.22 0.015 15;
 
     --destructive: 0.577 0.245 27.325;
     --destructive-foreground: 0.985 0 0;
 
-    --border: 0.85 0.03 30;
-    --input: 0.85 0.03 30;
-    --ring: 0.58 0.085 10;
+    --border: 0.84 0.032 30;
+    --input: 0.84 0.032 30;
+    --ring: 0.52 0.105 10;
 
     /* Custom tokens */
-    --blush: 0.93 0.04 15;
-    --rose: 0.58 0.085 10;
-    --gold: 0.78 0.1 65;
-    --parchment: 0.94 0.022 40;
-    --deep-rose: 0.5 0.115 10;
-    --soft-pink: 0.88 0.055 15;
+    --blush: 0.91 0.045 15;
+    --rose: 0.52 0.105 10;
+    --gold: 0.76 0.11 65;
+    --parchment: 0.93 0.025 42;
+    --deep-rose: 0.44 0.125 10;
+    --soft-pink: 0.86 0.06 15;
+    --burgundy: 0.35 0.095 10;
+    --cream: 0.97 0.01 50;
 
     --chart-1: 0.646 0.222 41.116;
     --chart-2: 0.6 0.118 184.704;
@@ -79,7 +101,17 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: "Lato", "GeneralSans", sans-serif;
+    font-family: "Lato", sans-serif;
+    background-image: radial-gradient(
+        ellipse at 20% 50%,
+        oklch(0.88 0.055 15 / 0.06) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse at 80% 20%,
+        oklch(0.76 0.11 65 / 0.04) 0%,
+        transparent 50%
+      );
   }
 }
 
@@ -92,6 +124,16 @@
   }
   .font-lato {
     font-family: "Lato", sans-serif;
+  }
+  .font-parisienne {
+    font-family: "Parisienne", cursive;
+  }
+  .font-fraunces {
+    font-family: "Fraunces", Georgia, serif;
+  }
+  .font-instrument {
+    font-family: "InstrumentSerif", Georgia, serif;
+    font-style: italic;
   }
 
   .text-rose-custom {
@@ -117,6 +159,12 @@
   }
   .bg-soft-pink {
     background-color: oklch(var(--soft-pink));
+  }
+  .text-burgundy {
+    color: oklch(var(--burgundy));
+  }
+  .bg-cream {
+    background-color: oklch(var(--cream));
   }
 }
 
@@ -218,6 +266,17 @@
   }
 }
 
+@keyframes playerSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .animate-float-up {
   animation: floatUp linear infinite;
 }
@@ -244,6 +303,10 @@
 
 .splash-exit {
   animation: splashExit 0.6s ease-in forwards;
+}
+
+.animate-player-slide-in {
+  animation: playerSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 /* Scrollbar styling */

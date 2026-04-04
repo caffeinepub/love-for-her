@@ -1,6 +1,10 @@
 import { Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import type { HeroPhoto } from "../hooks/useQueries";
+import { useGetHeroPhoto } from "../hooks/useQueries";
+
+export type { HeroPhoto };
 
 const HERO_HEARTS = Array.from({ length: 20 }, (_, i) => ({
   id: i,
@@ -13,14 +17,15 @@ const HERO_HEARTS = Array.from({ length: 20 }, (_, i) => ({
 
 export default function HeroSection() {
   const [visible, setVisible] = useState(false);
+  const { data: heroPhoto } = useGetHeroPhoto();
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100);
     return () => clearTimeout(t);
   }, []);
 
-  const scrollToShayari = () => {
-    const el = document.getElementById("shayari");
+  const scrollToQuotes = () => {
+    const el = document.getElementById("quotes");
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -35,7 +40,6 @@ export default function HeroSection() {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        // User cancelled — silently ignore
         if ((err as DOMException)?.name !== "AbortError") {
           console.error(err);
         }
@@ -50,6 +54,10 @@ export default function HeroSection() {
     }
   };
 
+  const bgImage = heroPhoto?.dataUrl
+    ? heroPhoto.dataUrl
+    : "/assets/generated/hero-romantic-bokeh.dim_1920x1080.jpg";
+
   return (
     <section
       id="home"
@@ -58,10 +66,9 @@ export default function HeroSection() {
     >
       {/* Background image + gradient overlay */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 transition-all duration-1000"
         style={{
-          backgroundImage:
-            "url('/assets/generated/hero-romantic-bokeh.dim_1920x1080.jpg')",
+          backgroundImage: `url('${bgImage}')`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -70,7 +77,7 @@ export default function HeroSection() {
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(160deg, rgba(139,26,26,0.62) 0%, rgba(192,57,43,0.50) 30%, rgba(201,122,124,0.45) 60%, rgba(242,182,191,0.30) 100%)",
+            "linear-gradient(160deg, rgba(80,14,14,0.72) 0%, rgba(139,26,26,0.58) 30%, rgba(192,57,43,0.42) 60%, rgba(242,182,191,0.25) 100%)",
         }}
       />
 
@@ -136,17 +143,17 @@ export default function HeroSection() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button
                   type="button"
-                  onClick={scrollToShayari}
+                  onClick={scrollToQuotes}
                   className="inline-flex items-center gap-2 text-white font-lato font-semibold text-sm tracking-wider px-8 py-3 rounded-full transition-all duration-300 hover:scale-105 active:scale-95"
                   style={{
                     background:
-                      "linear-gradient(135deg, oklch(0.58 0.085 10), oklch(0.50 0.115 10))",
+                      "linear-gradient(135deg, oklch(0.52 0.105 10), oklch(0.44 0.125 10))",
                     boxShadow:
-                      "0 4px 24px rgba(201,122,124,0.5), 0 1px 6px rgba(0,0,0,0.2)",
+                      "0 4px 24px rgba(139,26,26,0.45), 0 1px 6px rgba(0,0,0,0.2)",
                   }}
                   data-ocid="hero.primary_button"
                 >
-                  Scroll to Begin ♥
+                  Our Love Story ♥
                 </button>
 
                 {/* Share Love button */}
@@ -176,7 +183,7 @@ export default function HeroSection() {
         className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
         style={{
           background:
-            "linear-gradient(to top, oklch(0.97 0.008 20), transparent)",
+            "linear-gradient(to top, oklch(0.95 0.012 22), transparent)",
         }}
       />
     </section>

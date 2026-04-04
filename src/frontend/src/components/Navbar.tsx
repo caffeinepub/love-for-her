@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 
 const NAV_LINKS = [
   { label: "Home", href: "#home" },
-  { label: "Shayari", href: "#shayari" },
   { label: "Quotes", href: "#quotes" },
   { label: "Gallery", href: "#gallery" },
 ];
@@ -16,7 +15,7 @@ export default function Navbar() {
     const handleScroll = () => {
       setScrolled(window.scrollY > 40);
 
-      const sections = ["home", "shayari", "quotes", "gallery"];
+      const sections = ["home", "quotes", "gallery"];
       let current = "#home";
       for (const id of sections) {
         const el = document.getElementById(id);

@@ -2,9 +2,9 @@ import { useState } from "react";
 import Footer from "../components/Footer";
 import GallerySection from "../components/GallerySection";
 import HeroSection from "../components/HeroSection";
+import MusicPlayer from "../components/MusicPlayer";
 import Navbar from "../components/Navbar";
 import QuotesSection from "../components/QuotesSection";
-import ShayariSection from "../components/ShayariSection";
 import SplashScreen from "../components/SplashScreen";
 
 export default function HomePage() {
@@ -24,11 +24,11 @@ export default function HomePage() {
         <Navbar />
         <main>
           <HeroSection />
-          <ShayariSection />
           <QuotesSection />
           <GallerySection />
         </main>
         <Footer />
+        <MusicPlayer />
       </div>
     </>
   );

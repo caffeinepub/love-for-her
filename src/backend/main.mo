@@ -49,6 +49,17 @@ actor {
     order : Nat;
   };
 
+  type HeroPhoto = {
+    dataUrl : Text;
+    mimeType : Text;
+  };
+
+  type MusicTrack = {
+    dataUrl : Text;
+    mimeType : Text;
+    title : Text;
+  };
+
   public type UserProfile = {
     name : Text;
   };
@@ -74,6 +85,10 @@ actor {
   let photoEntryStoreV2 = Map.empty<Text, PhotoEntry>();
   let userProfiles = Map.empty<Principal, UserProfile>();
 
+  // Single-record stores for hero photo and music track
+  var heroPhoto : ?HeroPhoto = null;
+  var musicTrack : ?MusicTrack = null;
+
   // Migrate old photo entries to new store on first upgrade
   do {
     for ((id, old) in photoEntryStore.entries()) {
@@ -91,37 +106,6 @@ actor {
 
   // Initialize with sample data
   do {
-    // Initial Shayari
-    let initialShayari = [
-      (
-        "1",
-        {
-          id = "1";
-          title = "Pehli Nazaar";
-          body = "Tumhe dekha to yeh jaana sanam,\nPyaar hota hai deewana sanam.";
-          order = 1;
-        },
-      ),
-      (
-        "2",
-        {
-          id = "2";
-          title = "Ishq Wala Love";
-          body = "Ishq wala love hai, koi lafzon ki baat nahi,\nDil se dil tak pohanchti hai yeh khabar.";
-          order = 2;
-        },
-      ),
-      (
-        "3",
-        {
-          id = "3";
-          title = "Roshan Pyaar";
-          body = "Tere pyaar se roshan hai zindagi meri,\nTujh se juda na hona kabhi keh do.";
-          order = 3;
-        },
-      ),
-    ];
-
     // Initial Love Quotes
     let initialLoveQuotes = [
       (
@@ -150,7 +134,6 @@ actor {
       ),
     ];
 
-    initialShayari.forEach(func((id, sh)) { shayariStore.add(id, sh) });
     initialLoveQuotes.forEach(func((id, quote)) { loveQuoteStore.add(id, quote) });
   };
 
@@ -176,7 +159,7 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Shayari CRUD operations (Admin Only)
+  // Shayari CRUD operations (Admin Only) - kept for backwards compatibility
   public shared ({ caller }) func addShayari(newShayari : Shayari) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can add shayari");
@@ -280,5 +263,43 @@ actor {
 
   public query func getPhotoEntryById(id : Text) : async ?PhotoEntry {
     photoEntryStoreV2.get(id);
+  };
+
+  // Hero Photo - admin set, public get
+  public shared ({ caller }) func setHeroPhoto(photo : HeroPhoto) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set hero photo");
+    };
+    heroPhoto := ?photo;
+  };
+
+  public query func getHeroPhoto() : async ?HeroPhoto {
+    heroPhoto;
+  };
+
+  public shared ({ caller }) func clearHeroPhoto() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can clear hero photo");
+    };
+    heroPhoto := null;
+  };
+
+  // Music Track - admin set, public get
+  public shared ({ caller }) func setMusicTrack(track : MusicTrack) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set music track");
+    };
+    musicTrack := ?track;
+  };
+
+  public query func getMusicTrack() : async ?MusicTrack {
+    musicTrack;
+  };
+
+  public shared ({ caller }) func clearMusicTrack() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can clear music track");
+    };
+    musicTrack := null;
   };
 };
